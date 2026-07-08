@@ -22,6 +22,9 @@ It demonstrates:
 
 ```powershell
 cd E:\agent\aiagent\ai-ai-agent\outputs\stage2_research_assistant
+deactivate
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 ```
 
@@ -105,6 +108,54 @@ user topic
 -> program validates citations and records memory
 ```
 
+## LangChain create_agent Mode
+
+This version recreates the same tool-calling research assistant with LangChain's
+`create_agent`, while reusing the same local tools, memory, RAG, reporting, and
+citation validation code.
+
+```powershell
+python langchain_agent.py --no-memory "which open source projects should I study for Stage 2 RAG memory"
+```
+
+Interactive chat mode:
+
+```powershell
+python langchain_agent.py --chat
+```
+
+In chat mode, a small model-router call first classifies each message as
+`chat`, `research`, or `exit`. Research requests are then sent to the LangChain
+tool-calling agent, while casual messages go to a normal chat completion.
+
+Markdown output:
+
+```powershell
+python langchain_agent.py --no-memory --format markdown "which open source projects should I study for Stage 2 RAG memory"
+```
+
+Mapping from the hand-written agent to LangChain:
+
+```text
+DEEPSEEK_TOOLS            -> @tool wrappers in langchain_agent.py
+manual messages/tool loop -> create_agent(...)
+tool result messages      -> LangChain ToolMessage handling
+tools.py implementations  -> reused directly
+validate_citations()      -> still our own guardrail
+memory.py                 -> still our own memory layer
+```
+
+If Windows blocks `xxhash` while importing LangChain, first make sure you are
+using this project's `.venv`, not the Stage 1 environment:
+
+```powershell
+where python
+python -c "import sys; print(sys.executable)"
+```
+
+If it still points to `stage1_openai_agent\.venv`, close the terminal or run
+`deactivate`, then activate `stage2_research_assistant\.venv`.
+
 ## Output Shape
 
 ```json
@@ -132,6 +183,7 @@ memory.py              Short-term context, session memory, long-term memory
 research_assistant.py  Offline orchestration and guardrails
 deepseek_agent.py      RAG-first DeepSeek answer generation
 deepseek_tool_agent.py DeepSeek chooses tools in an agent loop
+langchain_agent.py     LangChain create_agent version using the same tools
 reporting.py           Markdown report rendering and saving
 sources/               Local documents used as RAG sources
 data/research.db       Auto-created SQLite database for the database tool
