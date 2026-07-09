@@ -156,6 +156,58 @@ python -c "import sys; print(sys.executable)"
 If it still points to `stage1_openai_agent\.venv`, close the terminal or run
 `deactivate`, then activate `stage2_research_assistant\.venv`.
 
+## LlamaIndex RAG Mode
+
+This version introduces LlamaIndex as a data-centric RAG framework. It loads
+`sources/*.md` with `SimpleDirectoryReader`, builds a `VectorStoreIndex`, uses a
+retriever to select relevant nodes, and then produces a cited learning report.
+
+```powershell
+python llamaindex_rag.py --no-memory "memory for RAG assistants"
+```
+
+This starter uses a tiny local `HashEmbedding` so you can learn the LlamaIndex
+flow without paying for embedding API calls. Replace it with a production
+embedding model later when retrieval quality matters.
+
+Mapping from the hand-written RAG code to LlamaIndex:
+
+```text
+load_markdown_sources() -> SimpleDirectoryReader
+chunk_document()        -> LlamaIndex node parsing
+build_index()           -> VectorStoreIndex
+retrieve()              -> index.as_retriever(...)
+answer_with_citations() -> local citation-aware response assembly
+```
+
+## LangChain + LlamaIndex Integrated Mode
+
+This version combines the two framework ideas: LangChain controls the agent
+loop and tool calling, while LlamaIndex performs the source retrieval inside a
+tool.
+
+```powershell
+python langchain_llamaindex_agent.py --no-memory "how should I choose chunk size and embeddings for RAG"
+```
+
+Interactive chat mode:
+
+```powershell
+python langchain_llamaindex_agent.py --chat
+```
+
+Integrated flow:
+
+```text
+user input
+-> model router classifies chat vs research
+-> LangChain create_agent runs the research agent
+-> agent calls llamaindex_search_sources
+-> LlamaIndex retrieves cited nodes from VectorStoreIndex
+-> model writes final JSON
+-> program validates citations and records memory
+```
+
 ## Output Shape
 
 ```json
@@ -184,8 +236,15 @@ research_assistant.py  Offline orchestration and guardrails
 deepseek_agent.py      RAG-first DeepSeek answer generation
 deepseek_tool_agent.py DeepSeek chooses tools in an agent loop
 langchain_agent.py     LangChain create_agent version using the same tools
+llamaindex_rag.py      LlamaIndex RAG starter with local embeddings
+langchain_llamaindex_agent.py
+                       LangChain agent loop with LlamaIndex retrieval tool
 reporting.py           Markdown report rendering and saving
 sources/               Local documents used as RAG sources
+sources/rag_chunking_embeddings.md
+                       Notes about chunking, embeddings, retrieval quality, and RAG tuning
+sources/framework_decision_path.md
+                       Notes about LangChain, LlamaIndex, and when to move to Stage 3
 data/research.db       Auto-created SQLite database for the database tool
 reports/               Saved Markdown research reports
 ```
